@@ -4,17 +4,26 @@ function notFound(req, res, next) {
 
 function dbHint(err) {
   const code = err && err.code;
-  if (code === 'ECONNREFUSED') {
-    return 'MySQL connect nahi ho raha. docker compose up -d chalao aur backend/.env check karo.';
+  const live = process.env.NODE_ENV === 'production';
+  if (code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ECONNRESET') {
+    return live
+      ? 'Database is not connected. Set DATABASE_URL on the Render API service.'
+      : 'MySQL connect nahi ho raha. docker compose up -d chalao aur backend/.env check karo.';
   }
-  if (code === 'ER_BAD_DB_ERROR' || code === 'ER_NO_SUCH_TABLE') {
-    return 'Database/tables missing hain. backend folder mein npm run db:init chalao.';
+  if (code === 'ER_BAD_DB_ERROR' || code === 'ER_NO_SUCH_TABLE' || code === '42P01') {
+    return live
+      ? 'Database tables are missing. Restart the API so schema can be created.'
+      : 'Database/tables missing hain. backend folder mein npm run db:init chalao.';
   }
-  if (code === 'ER_ACCESS_DENIED_ERROR') {
-    return 'MySQL user/password galat hai. backend/.env mein DB_USER / DB_PASSWORD check karo.';
+  if (code === 'ER_ACCESS_DENIED_ERROR' || code === '28P01') {
+    return live
+      ? 'Database login failed. Check DATABASE_URL on Render.'
+      : 'MySQL user/password galat hai. backend/.env mein DB_USER / DB_PASSWORD check karo.';
   }
-  if (code === 'ETIMEDOUT' || code === 'PROTOCOL_CONNECTION_LOST') {
-    return 'MySQL connection drop ho gaya. MySQL running hai ya nahi check karo.';
+  if (code === 'ETIMEDOUT' || code === 'PROTOCOL_CONNECTION_LOST' || code === 'EAI_AGAIN') {
+    return live
+      ? 'Database timed out. Use the Internal Database URL from Render Postgres.'
+      : 'MySQL connection drop ho gaya. MySQL running hai ya nahi check karo.';
   }
   return null;
 }

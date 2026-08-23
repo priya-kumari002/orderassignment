@@ -17,9 +17,18 @@ const frontendOrigins = (process.env.FRONTEND_URL || '')
   .map((s) => s.trim())
   .filter(Boolean);
 
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (frontendOrigins.includes(origin)) return true;
+  if (/^https:\/\/([a-z0-9-]+\.)*vercel\.app$/i.test(origin)) return true;
+  return frontendOrigins.length === 0;
+}
+
 app.use(
   cors({
-    origin: frontendOrigins.length ? frontendOrigins : true,
+    origin(origin, cb) {
+      cb(null, isAllowedOrigin(origin));
+    },
   })
 );
 app.use(express.json({ limit: '100kb' }));

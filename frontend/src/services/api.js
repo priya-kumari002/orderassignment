@@ -12,7 +12,16 @@ async function request(path, options = {}) {
   const t = token();
   if (t) headers.Authorization = `Bearer ${t}`;
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, { ...options, headers });
+  } catch (networkErr) {
+    const err = new Error(
+      'Cannot reach API. Render may be waking up, or the database is not connected.'
+    );
+    err.cause = networkErr;
+    throw err;
+  }
   let body = null;
   const text = await res.text();
   if (text) {
