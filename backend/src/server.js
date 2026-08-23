@@ -11,8 +11,22 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { ensureSchema } = require('./ensureSchema');
 
 const app = express();
-app.use(cors());
+
+const frontendOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: frontendOrigins.length ? frontendOrigins : true,
+  })
+);
 app.use(express.json({ limit: '100kb' }));
+
+app.get('/', (_req, res) => {
+  res.json({ ok: true, service: 'order-management-api' });
+});
 
 app.get('/api/health', async (req, res) => {
   try {
@@ -34,14 +48,16 @@ app.use(errorHandler);
 const port = Number(process.env.PORT || 4000);
 
 async function start() {
+  const { printTarget } = require('./dbConfig');
+  printTarget();
   await cache.init();
   try {
     await ensureSchema();
   } catch (err) {
     console.warn('[schema] users table not ready:', err.message);
   }
-  app.listen(port, () => {
-    console.log(`API listening on http://localhost:${port}`);
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`API listening on port ${port}`);
   });
 }
 
